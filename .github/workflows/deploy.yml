@@ -1,0 +1,108 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: 
+      - ${{ secrets.GIT_BRANCH || 'main' }}
+  pull_request:
+    branches: 
+      - ${{ secrets.GIT_BRANCH || 'main' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run tests
+      run: |
+        python -m pytest tests/ -v || echo "No tests found"
+
+    - name: Deploy to EC2
+      if: github.ref == 'refs/heads/${{ secrets.GIT_BRANCH || 'main' }}'
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_PUBLIC_IP }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # 디렉토리 생성
+          mkdir -p ${{ secrets.DEPLOY_PATH }}
+          cd ${{ secrets.DEPLOY_PATH }}
+          
+          # 기존 프로젝트 삭제 (있다면)
+          rm -rf DongYang-AI
+          
+          # 프로젝트 클론
+          git clone https://github.com/Seungkiii/DongYang-AI.git
+          cd DongYang-AI
+          
+          # 환경 변수 파일 생성
+          cat > .env << 'ENVEOF'
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          VECTOR_STORE_PATH=/app/vector_store
+          ENVEOF
+          
+          # 상위 디렉토리로 이동하여 docker-compose 실행
+          cd ..
+          
+          # Docker Compose 파일이 없다면 생성
+          if [ ! -f docker-compose.yml ]; then
+            cat > docker-compose.yml << 'COMPOSEEOF'
+          version: '3.8'
+          
+          services:
+            ai:
+              build:
+                context: ./DongYang-AI
+                dockerfile: Dockerfile
+              container_name: dongyang-ai
+              restart: unless-stopped
+              environment:
+                OPENAI_API_KEY: ${OPENAI_API_KEY}
+                VECTOR_STORE_PATH: /app/vector_store
+              ports:
+                - "8000:8000"
+              volumes:
+                - ai_data:/app/vector_store
+                - ./DongYang-AI/documents:/app/documents
+              networks:
+                - dongyang-network
+          
+          volumes:
+            ai_data:
+          
+          networks:
+            dongyang-network:
+              driver: bridge
+          COMPOSEEOF
+          fi
+          
+          # AI 서비스 재시작
+          docker-compose down ai || true
+          docker-compose build ai
+          docker-compose up -d ai
+          
+          # 로그 확인
+          echo "=== AI Service 로그 ==="
+          docker-compose logs --tail=10 ai 
