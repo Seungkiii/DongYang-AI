@@ -20,10 +20,10 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.12'
 
     - name: Cache pip dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v3
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -37,7 +37,20 @@ jobs:
 
     - name: Run tests
       run: |
-        python -m pytest tests/ -v || echo "No tests found"
+        python -m pytest tests/ -v
+
+    - name: Setup SSH key
+      if: github.ref == 'refs/heads/main'
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/docker-key
+        chmod 600 ~/.ssh/docker-key
+        ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
+
+    - name: Add public key to EC2
+      if: github.ref == 'refs/heads/main'
+      run: |
+        ssh -i ~/.ssh/docker-key ec2-user@${{ secrets.EC2_PUBLIC_IP }} "echo '${{ secrets.EC2_PUBLIC_KEY }}' >> ~/.ssh/authorized_keys"
 
     - name: Deploy to EC2
       if: github.ref == 'refs/heads/main'
@@ -52,17 +65,11 @@ jobs:
           cd ${{ secrets.DEPLOY_PATH }}
           
           # 기존 프로젝트 삭제 (있다면)
-          rm -rf DongYang-AI
+          rm -rf DogYang-Chatbot-AI
           
           # 프로젝트 클론
-          git clone https://github.com/Seungkiii/DongYang-AI.git
-          cd DongYang-AI
-          
-          # 환경 변수 파일 생성
-          cat > .env << 'ENVEOF'
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          VECTOR_STORE_PATH=/app/vector_store
-          ENVEOF
+          git clone https://github.com/Seungkiii/DogYang-Chatbot-AI.git
+          cd DogYang-Chatbot-AI
           
           # 상위 디렉토리로 이동하여 docker-compose 실행
           cd ..
@@ -71,28 +78,20 @@ jobs:
           if [ ! -f docker-compose.yml ]; then
             cat > docker-compose.yml << 'COMPOSEEOF'
           version: '3.8'
-          
+
           services:
+            # AI Service
             ai:
               build:
-                context: ./DongYang-AI
+                context: ./DogYang-Chatbot-AI
                 dockerfile: Dockerfile
               container_name: dongyang-ai
               restart: unless-stopped
-              environment:
-                OPENAI_API_KEY: ${OPENAI_API_KEY}
-                VECTOR_STORE_PATH: /app/vector_store
               ports:
                 - "8000:8000"
-              volumes:
-                - ai_data:/app/vector_store
-                - ./DongYang-AI/documents:/app/documents
               networks:
                 - dongyang-network
-          
-          volumes:
-            ai_data:
-          
+
           networks:
             dongyang-network:
               driver: bridge
