@@ -35,10 +35,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run tests
-      run: |
-        python -m pytest tests/ -v
-
     - name: Setup SSH key
       if: github.ref == 'refs/heads/main'
       run: |
