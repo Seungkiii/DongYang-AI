@@ -39,18 +39,13 @@ jobs:
       run: |
         python -m pytest tests/ -v || echo "No tests found"
 
-    - name: Setup SSH Key
-      run: |
-        echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > ~/.ssh/ec2_key
-        chmod 600 ~/.ssh/ec2_key
-
     - name: Deploy to EC2
       if: github.ref == 'refs/heads/main'
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_PUBLIC_IP }}
         username: ${{ secrets.EC2_USER }}
-        key_path: ~/.ssh/ec2_key
+        key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           # 디렉토리 생성
           mkdir -p ${{ secrets.DEPLOY_PATH }}
