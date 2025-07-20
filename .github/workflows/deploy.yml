@@ -83,8 +83,9 @@ jobs:
           docker container rm -f dongyang-ai || true
           docker container prune -f
           
-          # Vector store 디렉토리 생성 및 권한 설정
-          echo "=== Vector Store 디렉토리 준비 ==="
+          # ChromaDB 데이터베이스 완전 초기화 (500 에러 해결)
+          echo "=== ChromaDB 데이터베이스 초기화 ==="
+          sudo rm -rf /var/lib/docker/volumes/dongyang-chatbot_ai_data/_data/* || true
           sudo mkdir -p /var/lib/docker/volumes/dongyang-chatbot_ai_data/_data
           sudo chmod 755 /var/lib/docker/volumes/dongyang-chatbot_ai_data/_data
           sudo chown -R 1000:1000 /var/lib/docker/volumes/dongyang-chatbot_ai_data/_data || true
@@ -93,6 +94,14 @@ jobs:
           echo "=== 최신 이미지 배포 ==="
           docker-compose pull ai
           docker-compose up -d ai
+          
+          # AI 서버 기동 대기 및 임베딩 재생성
+          echo "=== AI 서버 기동 대기 ==="
+          sleep 10
+          
+          # 임베딩 재생성 (ChromaDB 초기화 후 필수)
+          echo "=== 임베딩 재생성 ==="
+          docker exec dongyang-ai python -c "from app.services.embedding_service import EmbeddingService; EmbeddingService().create_embeddings()" || echo "임베딩 생성 실패 - 수동으로 재시도 필요"
           
           # Clean up unused images
           docker image prune -f 
