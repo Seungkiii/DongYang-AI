@@ -83,3 +83,8 @@ jobs:
           
           # Clean up unused images
           docker image prune -f 
+          
+          # 로그 확인
+          echo "=== AI Service 로그 ==="
+          docker-compose logs --tail=10 ai
+          
