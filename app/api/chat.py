@@ -154,11 +154,22 @@ async def process_question(request: QuestionRequest):
                 confidence = 0.0
 
         elif intent == "general_chat":
-            # 유사한 컨텍스트 검색
-            context_docs = vector_store.similarity_search(
-                query=request.question,
-                k=request.context_count
-            )
+            # 보험 관련 키워드가 있는지 확인하여 더 정확한 검색 수행
+            insurance_keywords = ["보험", "상해", "엔젤", "수호천사", "종신", "암보험", "실손", "건강", "연금"]
+            has_insurance_keyword = any(keyword in request.question for keyword in insurance_keywords)
+            
+            if has_insurance_keyword:
+                # 보험 관련 질문인 경우 더 많은 컨텍스트 검색
+                context_docs = vector_store.similarity_search(
+                    query=request.question,
+                    k=min(request.context_count + 4, 12)  # 최대 12개까지 검색
+                )
+            else:
+                # 일반 질문인 경우 기본 컨텍스트 수 사용
+                context_docs = vector_store.similarity_search(
+                    query=request.question,
+                    k=request.context_count
+                )
             
             # GPT 응답 생성
             response = chat_engine.generate_answer(
@@ -169,10 +180,17 @@ async def process_question(request: QuestionRequest):
             contexts = response["contexts"]
             confidence = response["confidence"]
 
-            # 신뢰도 임계값 적용 (더 낮은 임계값으로 조정하여 더 많은 답변 허용)
-            threshold = getattr(settings, "confidence_threshold", 0.3)
+            # 신뢰도 임계값 적용 (보험 관련 질문은 더 관대하게)
+            if has_insurance_keyword:
+                threshold = getattr(settings, "confidence_threshold", 0.2)  # 보험 질문은 더 낮은 임계값
+            else:
+                threshold = getattr(settings, "confidence_threshold", 0.3)
+                
             if confidence < threshold:
-                answer = "제공된 정보를 바탕으로 답변드리겠습니다. 더 자세한 정보가 필요하시면 구체적으로 질문해 주세요."
+                if has_insurance_keyword:
+                    answer = "제공된 보험 상품 정보를 바탕으로 답변드리겠습니다. 더 구체적인 상품명이나 조건을 알려주시면 더 정확한 정보를 제공해드릴 수 있습니다."
+                else:
+                    answer = "제공된 정보를 바탕으로 답변드리겠습니다. 더 자세한 정보가 필요하시면 구체적으로 질문해 주세요."
 
         else:
             # 기타 의도는 일반 채팅으로 처리
