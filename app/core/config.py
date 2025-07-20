@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-ada-002"
     gpt_model: str = "gpt-4"
     
+    model_config = {
+        "env_file": "/Users/hwangseung-gi/Dongyang-Chatbot/DogYang-Chatbot-AI/.env",
+        "env_file_encoding": "utf-8"
+    }
+    
     # 벡터 DB 설정
     vector_store_path: str = "vector_store"
     documents_path: str = "documents"
@@ -19,9 +24,6 @@ class Settings(BaseSettings):
     # API 설정
     api_prefix: str = "/api"
     debug: bool = False
-    
-    class Config:
-        env_file = ".env"
 
 @lru_cache()
 def get_settings() -> Settings:

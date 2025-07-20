@@ -4,8 +4,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from .api import chat
-from .core.config import get_settings
+from app.api import chat
+from app.core.config import get_settings
 
 # 환경 변수 로드
 load_dotenv()
