@@ -32,7 +32,7 @@ app.include_router(chat.router, prefix="/api")
 
 @app.get("/", include_in_schema=False)
 async def read_root():
-    return FileResponse("chatbot_ui.html")
+    return {"status": "ok", "service": "dongyang-ai", "message": "AI API 서버가 정상적으로 작동 중입니다."}
 
 @app.get("/health")
 async def health_check():
