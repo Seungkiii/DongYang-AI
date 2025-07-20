@@ -77,7 +77,14 @@ jobs:
           # Login to GitHub Container Registry
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           
-          # Pull latest images and restart services
+          # 기존 AI 컨테이너 완전 정리
+          echo "=== 기존 AI 컨테이너 정리 ==="
+          docker-compose down ai || true
+          docker container rm -f dongyang-ai || true
+          docker container prune -f
+          
+          # 최신 이미지 풀 및 재시작
+          echo "=== 최신 이미지 배포 ==="
           docker-compose pull ai
           docker-compose up -d ai
           
@@ -86,5 +93,4 @@ jobs:
           
           # 로그 확인
           echo "=== AI Service 로그 ==="
-          docker-compose logs --tail=10 ai
-          
+          docker-compose logs --tail=10 ai 
