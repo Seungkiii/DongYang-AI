@@ -83,6 +83,12 @@ jobs:
           docker container rm -f dongyang-ai || true
           docker container prune -f
           
+          # Vector store 디렉토리 생성 및 권한 설정
+          echo "=== Vector Store 디렉토리 준비 ==="
+          sudo mkdir -p /var/lib/docker/volumes/dongyang-chatbot_ai_data/_data
+          sudo chmod 755 /var/lib/docker/volumes/dongyang-chatbot_ai_data/_data
+          sudo chown -R 1000:1000 /var/lib/docker/volumes/dongyang-chatbot_ai_data/_data || true
+          
           # 최신 이미지 풀 및 재시작
           echo "=== 최신 이미지 배포 ==="
           docker-compose pull ai
