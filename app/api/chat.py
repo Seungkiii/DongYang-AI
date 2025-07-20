@@ -17,7 +17,7 @@ router = APIRouter(prefix="/chat")
 
 class QuestionRequest(BaseModel):
     question: str
-    context_count: int = 5
+    context_count: int = 8
 
 class ChatResponse(BaseModel):
     answer: Optional[str] = None
@@ -169,10 +169,10 @@ async def process_question(request: QuestionRequest):
             contexts = response["contexts"]
             confidence = response["confidence"]
 
-            # 신뢰도 임계값 적용 (환경변수/설정에서 불러오거나 기본값 0.5)
-            threshold = getattr(settings, "confidence_threshold", 0.5)
+            # 신뢰도 임계값 적용 (더 낮은 임계값으로 조정하여 더 많은 답변 허용)
+            threshold = getattr(settings, "confidence_threshold", 0.3)
             if confidence < threshold:
-                answer = "죄송합니다. 명확한 답변을 드릴 수 없습니다. 질문을 다시 한번 구체적으로 입력해 주세요."
+                answer = "제공된 정보를 바탕으로 답변드리겠습니다. 더 자세한 정보가 필요하시면 구체적으로 질문해 주세요."
 
         else:
             # 기타 의도는 일반 채팅으로 처리
