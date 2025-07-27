@@ -589,17 +589,3 @@ logger.error(f"Vector search failed: {str(e)}")
 - 로그 암호화: 민감한 로그 데이터 암호화
 - 접근 제어: 벡터 스토어 접근 권한 관리
 
-## 라이센스
-MIT License
-
-## 기여하기
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 지원 및 문의
-- 이슈 리포팅: GitHub Issues
-- 기술 문의: [이메일 주소]
-- 문서 개선: Pull Request 환영
